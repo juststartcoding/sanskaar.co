@@ -15,7 +15,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "https://sanskaar.co"],
+    origin: ["http://localhost:3000", "https://uat.sanskaar.co"],
     credentials: true,
   },
 });
@@ -27,7 +27,7 @@ const io = new Server(server, {
 // CORS Configuration
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://sanskaar.co"],
+    origin: ["http://localhost:3000", "https://uat/sanskaar.co"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

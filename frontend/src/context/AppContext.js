@@ -81,21 +81,20 @@ export const AppProvider = ({ children }) => {
       const response = await authAPI.login(credentials);
       const { token, user } = response.data;
 
-      // Store token in localStorage
       localStorage.setItem("token", token);
-
-      // Store user in localStorage (for role checking)
       localStorage.setItem("user", JSON.stringify(user));
 
-      // Update state
       setUser(user);
       setIsAuthenticated(true);
 
-      // Load cart
-      await loadCart();
+      // Load cart - ignore errors
+      try {
+        await loadCart();
+      } catch (e) {
+        console.log("Cart load skipped");
+      }
 
-      // Return success with user object
-      return { success: true, user: user }; // ✅ User included
+      return { success: true, user: user };
     } catch (error) {
       console.error("Login error:", error);
       return {

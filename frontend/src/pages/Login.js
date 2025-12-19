@@ -1,59 +1,59 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
-import { Eye, EyeOff } from 'lucide-react';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useApp } from "../context/AppContext";
+import { Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
   const { login } = useApp();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
     // Clear error when user starts typing
-    if (error) setError('');
+    if (error) setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
-    
+
     try {
       const result = await login(formData);
       setLoading(false);
-      
+
       if (result && result.success) {
         // Redirect based on user role
-        const userRole = result.user?.role || 'user';
-        switch(userRole) {
-          case 'admin':
-            navigate('/admin/dashboard');
+        const userRole = result.user?.role || "user";
+        switch (userRole) {
+          case "admin":
+            navigate("/admin/dashboard");
             break;
-          case 'pandit':
-            navigate('/pandit/dashboard');
+          case "pandit":
+            navigate("/pandit/dashboard");
             break;
-          case 'seller':
-            navigate('/seller/dashboard');
+          case "seller":
+            navigate("/seller/dashboard");
             break;
           default:
-            navigate('/');
+            navigate("/");
         }
       } else {
-        setError(result?.error || 'Login failed. Please try again.');
+        setError(result?.error || "Login failed. Please try again.");
       }
     } catch (err) {
       setLoading(false);
-      setError('An error occurred. Please try again.');
+      setError("An error occurred. Please try again.");
     }
   };
 
@@ -108,7 +108,11 @@ const Login = () => {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
               </button>
             </div>
           </div>
@@ -124,7 +128,10 @@ const Login = () => {
                 Remember me
               </label>
             </div>
-            <Link to="/forgot-password" className="text-sm text-orange-600 hover:text-orange-700">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-orange-600 hover:text-orange-700"
+            >
               Forgot password?
             </Link>
           </div>
@@ -134,14 +141,17 @@ const Login = () => {
             disabled={loading}
             className="w-full bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-orange-600 hover:text-orange-700 font-semibold">
+            Don't have an account?{" "}
+            <Link
+              to="/register"
+              className="text-orange-600 hover:text-orange-700 font-semibold"
+            >
               Sign up
             </Link>
           </p>

@@ -1,4 +1,5 @@
 const Pooja = require("../models/Pooja");
+const PoojaTemplate = require("../models/PoojaTemplate");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs").promises;
@@ -171,41 +172,118 @@ exports.handleFileUpload = async (req, res) => {
 // @access  Public
 exports.getAllPoojas = async (req, res) => {
   try {
-    const { page = 1, limit = 10, language, type, search } = req.query;
+    const { page = 1, limit = 20, language, type, search, category, featured } = req.query;
 
-    const query = { isActive: true };
-
-    if (language) {
-      query.poojaLanguage = language;
+    // First try to get from PoojaTemplate (new system)
+    const templateQuery = { isActive: true };
+    
+    if (category) {
+      templateQuery.category = category;
     }
-
-    if (type) {
-      query.poojaType = { $regex: type, $options: "i" };
+    if (featured === 'true') {
+      templateQuery.isFeatured = true;
     }
-
     if (search) {
-      query.$or = [
+      templateQuery.$or = [
+        { "name.hi": { $regex: search, $options: "i" } },
+        { "name.en": { $regex: search, $options: "i" } },
+        { "description.hi": { $regex: search, $options: "i" } },
+        { "description.en": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const templates = await PoojaTemplate.find(templateQuery)
+      .populate("deity_id", "name icon_url")
+      .populate("steps.step_id", "title icon_url")
+      .populate("samagri_list.product_id", "name images price")
+      .sort({ isFeatured: -1, createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
+
+    const templateCount = await PoojaTemplate.countDocuments(templateQuery);
+
+    // Also get from old Pooja model for backward compatibility
+    const poojaQuery = { isActive: true };
+    if (language) {
+      poojaQuery.poojaLanguage = language;
+    }
+    if (type) {
+      poojaQuery.poojaType = { $regex: type, $options: "i" };
+    }
+    if (search) {
+      poojaQuery.$or = [
         { poojaType: { $regex: search, $options: "i" } },
         { "importance.hindi": { $regex: search, $options: "i" } },
         { "importance.english": { $regex: search, $options: "i" } },
       ];
     }
 
-    const poojas = await Pooja.find(query)
+    const oldPoojas = await Pooja.find(poojaQuery)
       .populate("createdBy", "name email")
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .exec();
 
-    const count = await Pooja.countDocuments(query);
+    const oldCount = await Pooja.countDocuments(poojaQuery);
+
+    // Transform templates to match frontend expected format
+    const transformedTemplates = templates.map(t => ({
+      _id: t._id,
+      poojaType: t.name?.en || t.name?.hi || "Pooja",
+      poojaName: t.name,
+      name: t.name,
+      slug: t.slug,
+      poojaLanguage: "hindi",
+      importance: {
+        hindi: t.short_description?.hi || t.description?.hi || "",
+        english: t.short_description?.en || t.description?.en || "",
+        sanskrit: "",
+      },
+      description: t.description,
+      short_description: t.short_description,
+      deity: t.deity_id,
+      category: t.category,
+      difficulty_level: t.difficulty_level,
+      total_duration_minutes: t.total_duration_minutes,
+      main_image_url: t.main_image_url,
+      thumbnail_url: t.thumbnail_url,
+      steps: {
+        hindi: t.steps?.map(s => ({
+          title: s.step_id?.title?.hi || s.step_code,
+          order: s.order,
+          duration_minutes: s.duration_minutes,
+        })) || [],
+        english: t.steps?.map(s => ({
+          title: s.step_id?.title?.en || s.step_code,
+          order: s.order,
+          duration_minutes: s.duration_minutes,
+        })) || [],
+        sanskrit: [],
+      },
+      samagri_list: t.samagri_list,
+      ratings: t.ratings,
+      views: t.views,
+      completions: t.completions,
+      isFeatured: t.isFeatured,
+      isActive: t.isActive,
+      isTemplate: true,
+      createdAt: t.createdAt,
+    }));
+
+    // Combine both results (templates first, then old poojas)
+    const allPoojas = [...transformedTemplates, ...oldPoojas];
+    const totalCount = templateCount + oldCount;
 
     res.status(200).json({
       success: true,
-      data: poojas,
-      totalPages: Math.ceil(count / limit),
-      currentPage: page,
-      totalRecords: count,
+      data: allPoojas,
+      templates: transformedTemplates,
+      poojas: oldPoojas,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: parseInt(page),
+      totalRecords: totalCount,
     });
   } catch (error) {
     console.error("Get Poojas Error:", error);
@@ -221,10 +299,97 @@ exports.getAllPoojas = async (req, res) => {
 // @access  Public
 exports.getPoojaById = async (req, res) => {
   try {
-    const pooja = await Pooja.findById(req.params.id).populate(
-      "createdBy",
-      "name email role"
-    );
+    const { id } = req.params;
+
+    // First try to find in PoojaTemplate
+    let template = await PoojaTemplate.findById(id)
+      .populate("deity_id")
+      .populate("aarti_id")
+      .populate("steps.step_id")
+      .populate("steps.mantra_id")
+      .populate("samagri_list.product_id");
+
+    if (template) {
+      // Increment views
+      template.views = (template.views || 0) + 1;
+      await template.save();
+
+      // Transform to expected format
+      const transformedTemplate = {
+        _id: template._id,
+        poojaType: template.name?.en || template.name?.hi || "Pooja",
+        poojaName: template.name,
+        name: template.name,
+        slug: template.slug,
+        poojaLanguage: "hindi",
+        importance: {
+          hindi: template.short_description?.hi || template.description?.hi || "",
+          english: template.short_description?.en || template.description?.en || "",
+          sanskrit: "",
+        },
+        description: template.description,
+        short_description: template.short_description,
+        benefits: template.benefits,
+        deity: template.deity_id,
+        aarti: template.aarti_id,
+        category: template.category,
+        difficulty_level: template.difficulty_level,
+        total_duration_minutes: template.total_duration_minutes,
+        main_image_url: template.main_image_url,
+        thumbnail_url: template.thumbnail_url,
+        steps: {
+          hindi: template.steps?.map(s => ({
+            _id: s._id,
+            step_code: s.step_code,
+            title: s.step_id?.title?.hi || s.step_code,
+            instruction: s.step_id?.instruction?.hi || s.custom_instruction?.hi || "",
+            icon_url: s.step_id?.icon_url,
+            image_url: s.step_id?.image_url,
+            audio_url: s.step_id?.audio_url,
+            video_url: s.step_id?.video_url,
+            mantra: s.mantra_id,
+            mantra_repeat_count: s.mantra_repeat_count,
+            order: s.order,
+            duration_minutes: s.duration_minutes,
+            is_optional: s.is_optional,
+          })) || [],
+          english: template.steps?.map(s => ({
+            _id: s._id,
+            step_code: s.step_code,
+            title: s.step_id?.title?.en || s.step_code,
+            instruction: s.step_id?.instruction?.en || s.custom_instruction?.en || "",
+            icon_url: s.step_id?.icon_url,
+            image_url: s.step_id?.image_url,
+            audio_url: s.step_id?.audio_url,
+            video_url: s.step_id?.video_url,
+            mantra: s.mantra_id,
+            mantra_repeat_count: s.mantra_repeat_count,
+            order: s.order,
+            duration_minutes: s.duration_minutes,
+            is_optional: s.is_optional,
+          })) || [],
+          sanskrit: [],
+        },
+        templateSteps: template.steps,
+        samagri_list: template.samagri_list,
+        ratings: template.ratings,
+        views: template.views,
+        completions: template.completions,
+        isFeatured: template.isFeatured,
+        isActive: template.isActive,
+        isTemplate: true,
+        createdAt: template.createdAt,
+        updatedAt: template.updatedAt,
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: transformedTemplate,
+      });
+    }
+
+    // If not found in templates, try old Pooja model
+    const pooja = await Pooja.findById(id).populate("createdBy", "name email role");
 
     if (!pooja) {
       return res.status(404).json({

@@ -9,23 +9,32 @@ const poojaStepMasterSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
-    title_hi: {
-      type: String,
-      required: true,
+    title: {
+      hi: { type: String, required: true },
+      en: { type: String, required: true },
+      sa: { type: String, default: "" },
     },
-    title_en: {
-      type: String,
-      required: true,
+    instruction: {
+      hi: { type: String, default: "" },
+      en: { type: String, default: "" },
     },
-    instruction_hi: {
-      type: String,
-      default: "",
-    },
-    instruction_en: {
-      type: String,
-      default: "",
+    description: {
+      hi: { type: String, default: "" },
+      en: { type: String, default: "" },
     },
     icon_url: {
+      type: String,
+      default: "",
+    },
+    image_url: {
+      type: String,
+      default: "",
+    },
+    audio_url: {
+      type: String,
+      default: "",
+    },
+    video_url: {
       type: String,
       default: "",
     },
@@ -36,6 +45,14 @@ const poojaStepMasterSchema = new mongoose.Schema(
     order_hint: {
       type: Number,
       default: 0,
+    },
+    duration_minutes: {
+      type: Number,
+      default: 5,
+    },
+    background_color: {
+      type: String,
+      default: "#FFF7ED",
     },
     isActive: {
       type: Boolean,
@@ -54,5 +71,6 @@ const poojaStepMasterSchema = new mongoose.Schema(
 // Indexes
 poojaStepMasterSchema.index({ step_code: 1 });
 poojaStepMasterSchema.index({ order_hint: 1 });
+poojaStepMasterSchema.index({ "title.hi": "text", "title.en": "text" });
 
 module.exports = mongoose.model("PoojaStepMaster", poojaStepMasterSchema);

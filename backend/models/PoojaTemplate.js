@@ -17,17 +17,17 @@ const poojaTemplateStepSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  custom_instruction_hi: {
-    type: String,
-    default: "",
-  },
-  custom_instruction_en: {
-    type: String,
-    default: "",
+  custom_instruction: {
+    hi: { type: String, default: "" },
+    en: { type: String, default: "" },
   },
   duration_minutes: {
     type: Number,
     default: 5,
+  },
+  mantra_repeat_count: {
+    type: Number,
+    default: 11,
   },
   is_optional: {
     type: Boolean,
@@ -35,15 +35,34 @@ const poojaTemplateStepSchema = new mongoose.Schema({
   },
 });
 
+const samagriItemSchema = new mongoose.Schema({
+  product_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+  },
+  product_name: {
+    type: String,
+    default: "",
+  },
+  product_image: {
+    type: String,
+    default: "",
+  },
+  quantity: {
+    type: String,
+    default: "1",
+  },
+  is_required: {
+    type: Boolean,
+    default: true,
+  },
+});
+
 const poojaTemplateSchema = new mongoose.Schema(
   {
-    pooja_name: {
-      type: String,
-      required: true,
-    },
-    pooja_name_hi: {
-      type: String,
-      default: "",
+    name: {
+      hi: { type: String, required: true },
+      en: { type: String, required: true },
     },
     slug: {
       type: String,
@@ -55,18 +74,26 @@ const poojaTemplateSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["DAILY", "FESTIVAL", "SPECIAL", "OCCASION", "SANATAN"],
+      enum: ["DAILY", "FESTIVAL", "SPECIAL", "OCCASION", "NAVAGRAHA", "SANATAN"],
       default: "DAILY",
     },
-    description_hi: {
-      type: String,
-      default: "",
+    short_description: {
+      hi: { type: String, default: "" },
+      en: { type: String, default: "" },
     },
-    description_en: {
-      type: String,
-      default: "",
+    description: {
+      hi: { type: String, default: "" },
+      en: { type: String, default: "" },
+    },
+    benefits: {
+      hi: { type: String, default: "" },
+      en: { type: String, default: "" },
     },
     main_image_url: {
+      type: String,
+      default: "",
+    },
+    thumbnail_url: {
       type: String,
       default: "",
     },
@@ -75,25 +102,20 @@ const poojaTemplateSchema = new mongoose.Schema(
       ref: "AartiMaster",
     },
     steps: [poojaTemplateStepSchema],
+    samagri_list: [samagriItemSchema],
     total_duration_minutes: {
       type: Number,
       default: 30,
     },
     difficulty_level: {
       type: String,
-      enum: ["Easy", "Medium", "Advanced"],
-      default: "Easy",
+      enum: ["BEGINNER", "INTERMEDIATE", "ADVANCED"],
+      default: "BEGINNER",
     },
     best_time: {
       type: String,
       default: "Morning",
     },
-    samagri_list: [{
-      item_name_hi: String,
-      item_name_en: String,
-      quantity: String,
-      is_required: { type: Boolean, default: true },
-    }],
     views: {
       type: Number,
       default: 0,
@@ -126,8 +148,8 @@ const poojaTemplateSchema = new mongoose.Schema(
 
 // Pre-save hook for slug
 poojaTemplateSchema.pre("save", function (next) {
-  if (!this.slug) {
-    this.slug = this.pooja_name
+  if (!this.slug && this.name?.en) {
+    this.slug = this.name.en
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
@@ -145,5 +167,6 @@ poojaTemplateSchema.index({ slug: 1 });
 poojaTemplateSchema.index({ category: 1 });
 poojaTemplateSchema.index({ deity_id: 1 });
 poojaTemplateSchema.index({ isFeatured: 1 });
+poojaTemplateSchema.index({ "name.hi": "text", "name.en": "text" });
 
 module.exports = mongoose.model("PoojaTemplate", poojaTemplateSchema);

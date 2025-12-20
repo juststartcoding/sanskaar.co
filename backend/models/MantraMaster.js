@@ -7,19 +7,27 @@ const mantraMasterSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    text_sa: {
+    mantra_code: {
       type: String,
-      default: "",
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true,
     },
-    text_hi: {
-      type: String,
-      default: "",
+    text: {
+      sa: { type: String, default: "" },
+      hi: { type: String, default: "" },
+      en: { type: String, default: "" },
     },
-    text_en: {
-      type: String,
-      default: "",
+    meaning: {
+      hi: { type: String, default: "" },
+      en: { type: String, default: "" },
     },
     audio_url: {
+      type: String,
+      default: "",
+    },
+    video_url: {
       type: String,
       default: "",
     },
@@ -31,6 +39,10 @@ const mantraMasterSchema = new mongoose.Schema(
       type: [Number],
       default: [11, 21, 108],
     },
+    default_repeat: {
+      type: Number,
+      default: 11,
+    },
     safe_for_all: {
       type: Boolean,
       default: true,
@@ -41,8 +53,8 @@ const mantraMasterSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["General", "Deity Specific", "Occasion", "Morning", "Evening", "Protection"],
-      default: "General",
+      enum: ["GENERAL", "DEITY_SPECIFIC", "OCCASION", "MORNING", "EVENING", "PROTECTION", "HEALING", "PROSPERITY"],
+      default: "GENERAL",
     },
     isActive: {
       type: Boolean,
@@ -59,8 +71,9 @@ const mantraMasterSchema = new mongoose.Schema(
 );
 
 // Indexes
-mantraMasterSchema.index({ mantra_name: "text" });
+mantraMasterSchema.index({ mantra_name: "text", "text.sa": "text" });
 mantraMasterSchema.index({ deity_id: 1 });
 mantraMasterSchema.index({ category: 1 });
+mantraMasterSchema.index({ mantra_code: 1 });
 
 module.exports = mongoose.model("MantraMaster", mantraMasterSchema);

@@ -207,119 +207,9 @@ router.delete("/steps/:id", async (req, res) => {
   }
 });
 
-// Legacy routes - keep for backward compatibility
-router.get("/pooja-steps", async (req, res) => {
-  try {
-    const { page = 1, limit = 50, search, active } = req.query;
-    
-    const query = {};
-    if (search) {
-      query.$or = [
-        { step_code: { $regex: search, $options: "i" } },
-        { "title.hi": { $regex: search, $options: "i" } },
-        { "title.en": { $regex: search, $options: "i" } },
-      ];
-    }
-    if (active !== undefined) {
-      query.isActive = active === "true";
-    }
 
-    const steps = await PoojaStepMaster.find(query)
-      .sort({ order_hint: 1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await PoojaStepMaster.countDocuments(query);
-
-    res.json({
-      success: true,
-      steps,
-      total,
-      totalPages: Math.ceil(total / limit),
-      currentPage: parseInt(page),
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Get single step
-router.get("/pooja-steps/:id", async (req, res) => {
-  try {
-    const step = await PoojaStepMaster.findById(req.params.id);
-    if (!step) {
-      return res.status(404).json({ success: false, message: "Step not found" });
-    }
-    res.json({ success: true, step });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Create step
-router.post("/pooja-steps", async (req, res) => {
-  try {
-    const { step_code, title_hi, title_en, instruction_hi, instruction_en, icon_url, is_mandatory, order_hint } = req.body;
-
-    if (!step_code || !title_hi || !title_en) {
-      return res.status(400).json({ success: false, message: "step_code, title_hi, and title_en are required" });
-    }
-
-    const existing = await PoojaStepMaster.findOne({ step_code: step_code.toUpperCase() });
-    if (existing) {
-      return res.status(400).json({ success: false, message: "Step code already exists" });
-    }
-
-    const step = new PoojaStepMaster({
-      step_code: step_code.toUpperCase(),
-      title_hi,
-      title_en,
-      instruction_hi,
-      instruction_en,
-      icon_url,
-      is_mandatory,
-      order_hint,
-      createdBy: req.user._id,
-    });
-
-    await step.save();
-    res.status(201).json({ success: true, message: "Step created", step });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Update step
-router.put("/pooja-steps/:id", async (req, res) => {
-  try {
-    const step = await PoojaStepMaster.findByIdAndUpdate(
-      req.params.id,
-      { ...req.body },
-      { new: true, runValidators: true }
-    );
-
-    if (!step) {
-      return res.status(404).json({ success: false, message: "Step not found" });
-    }
-
-    res.json({ success: true, message: "Step updated", step });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Delete step
-router.delete("/pooja-steps/:id", async (req, res) => {
-  try {
-    const step = await PoojaStepMaster.findByIdAndDelete(req.params.id);
-    if (!step) {
-      return res.status(404).json({ success: false, message: "Step not found" });
-    }
-    res.json({ success: true, message: "Step deleted" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+// Legacy routes removed - use /steps endpoints instead
+// The /steps endpoints support the new nested title/instruction format
 
 // ============================================
 // MANTRAS MASTER CRUD
@@ -666,8 +556,8 @@ router.get("/pooja-templates", async (req, res) => {
     const query = {};
     if (search) {
       query.$or = [
-        { pooja_name: { $regex: search, $options: "i" } },
-        { pooja_name_hi: { $regex: search, $options: "i" } },
+        { "name.hi": { $regex: search, $options: "i" } },
+        { "name.en": { $regex: search, $options: "i" } },
       ];
     }
     if (category) query.category = category;
@@ -675,8 +565,9 @@ router.get("/pooja-templates", async (req, res) => {
     if (featured !== undefined) query.isFeatured = featured === "true";
 
     const templates = await PoojaTemplate.find(query)
-      .populate("deity_id", "name_hi name_en icon_url")
+      .populate("deity_id", "name icon_url")
       .populate("aarti_id", "title audio_url")
+      .populate("samagri_list.product_id", "name images price")
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -700,7 +591,8 @@ router.get("/pooja-templates/:id", async (req, res) => {
       .populate("deity_id")
       .populate("aarti_id")
       .populate("steps.step_id")
-      .populate("steps.mantra_id");
+      .populate("steps.mantra_id")
+      .populate("samagri_list.product_id");
 
     if (!template) {
       return res.status(404).json({ success: false, message: "Template not found" });
@@ -712,17 +604,55 @@ router.get("/pooja-templates/:id", async (req, res) => {
   }
 });
 
+// Helper function to sanitize ObjectId fields (convert empty strings to null)
+const sanitizeObjectId = (value) => {
+  if (!value || value === "") return null;
+  return value;
+};
+
+// Sanitize steps array
+const sanitizeSteps = (steps) => {
+  if (!steps || !Array.isArray(steps)) return [];
+  return steps.map(step => ({
+    ...step,
+    step_id: sanitizeObjectId(step.step_id),
+    mantra_id: sanitizeObjectId(step.mantra_id),
+  }));
+};
+
+// Sanitize samagri list
+const sanitizeSamagriList = (list) => {
+  if (!list || !Array.isArray(list)) return [];
+  return list.map(item => ({
+    ...item,
+    product_id: sanitizeObjectId(item.product_id),
+  }));
+};
+
 router.post("/pooja-templates", async (req, res) => {
   try {
-    const template = new PoojaTemplate({
+    const { name, steps, samagri_list, deity_id, aarti_id } = req.body;
+    
+    if (!name?.hi || !name?.en) {
+      return res.status(400).json({ success: false, message: "name.hi and name.en are required" });
+    }
+
+    // Sanitize the data before saving
+    const sanitizedData = {
       ...req.body,
+      deity_id: sanitizeObjectId(deity_id),
+      aarti_id: sanitizeObjectId(aarti_id),
+      steps: sanitizeSteps(steps),
+      samagri_list: sanitizeSamagriList(samagri_list),
       createdBy: req.user._id,
-    });
+    };
+
+    const template = new PoojaTemplate(sanitizedData);
 
     await template.save();
     
     // Populate for response
-    await template.populate("deity_id", "name_hi name_en");
+    await template.populate("deity_id", "name");
 
     res.status(201).json({ success: true, message: "Template created", template });
   } catch (error) {
@@ -732,11 +662,22 @@ router.post("/pooja-templates", async (req, res) => {
 
 router.put("/pooja-templates/:id", async (req, res) => {
   try {
+    const { steps, samagri_list, deity_id, aarti_id } = req.body;
+
+    // Sanitize the data before updating
+    const sanitizedData = {
+      ...req.body,
+      deity_id: sanitizeObjectId(deity_id),
+      aarti_id: sanitizeObjectId(aarti_id),
+      steps: sanitizeSteps(steps),
+      samagri_list: sanitizeSamagriList(samagri_list),
+    };
+
     const template = await PoojaTemplate.findByIdAndUpdate(
       req.params.id,
-      { ...req.body },
+      sanitizedData,
       { new: true, runValidators: true }
-    ).populate("deity_id", "name_hi name_en");
+    ).populate("deity_id", "name");
 
     if (!template) {
       return res.status(404).json({ success: false, message: "Template not found" });

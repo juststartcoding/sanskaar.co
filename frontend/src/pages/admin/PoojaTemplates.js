@@ -111,6 +111,13 @@ const PoojaTemplates = () => {
     setFormData({ ...formData, steps: newSteps });
   };
 
+  // Helper function to get product name as string
+  const getProductName = (product) => {
+    if (!product?.name) return "Product";
+    if (typeof product.name === 'string') return product.name;
+    return product.name.english || product.name.hindi || product.name.en || product.name.hi || "Product";
+  };
+
   // Add product to samagri
   const addSamagri = (productId) => {
     if (!productId) return;
@@ -123,8 +130,8 @@ const PoojaTemplates = () => {
       ...formData,
       samagri_list: [...formData.samagri_list, {
         product_id: product._id,
-        product_name: product.name,
-        product_image: product.images?.[0] || product.image || "",
+        product_name: getProductName(product),
+        product_image: product.images?.[0] || product.image || product.mainImage || "",
         quantity: "1",
         is_required: true,
       }]
@@ -212,14 +219,24 @@ const PoojaTemplates = () => {
   const difficulties = ["BEGINNER", "INTERMEDIATE", "ADVANCED"];
 
   // Filter products for search
-  const filteredProducts = products.filter(p => 
-    !formData.samagri_list.find(s => s.product_id === p._id) &&
-    (!productSearch || 
-     (typeof p.name === 'string' && p.name.toLowerCase().includes(productSearch.toLowerCase())) ||
-     (p.name?.english && p.name.english.toLowerCase().includes(productSearch.toLowerCase())) ||
-     (p.name?.hindi && p.name.hindi.includes(productSearch)) ||
-     (p.nameHindi && p.nameHindi.includes(productSearch)))
-  );
+  const filteredProducts = products.filter(p => {
+    // Check if already added
+    if (formData.samagri_list.find(s => s.product_id === p._id)) return false;
+    if (!productSearch) return true;
+    
+    const searchLower = productSearch.toLowerCase();
+    // Handle both string and object name formats
+    if (typeof p.name === 'string') {
+      return p.name.toLowerCase().includes(searchLower);
+    }
+    return (
+      (p.name?.english && p.name.english.toLowerCase().includes(searchLower)) ||
+      (p.name?.hindi && p.name.hindi.includes(productSearch)) ||
+      (p.name?.en && p.name.en.toLowerCase().includes(searchLower)) ||
+      (p.name?.hi && p.name.hi.includes(productSearch)) ||
+      (p.nameHindi && p.nameHindi.includes(productSearch))
+    );
+  });
 
   const FileUploadField = ({ label, field, currentUrl }) => (
     <div className="space-y-2">
@@ -401,25 +418,29 @@ const PoojaTemplates = () => {
                   {/* Product Dropdown */}
                   {productSearch && filteredProducts.length > 0 && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto z-20">
-                      {filteredProducts.slice(0, 10).map(p => (
-                        <button
-                          key={p._id}
-                          type="button"
-                          onClick={() => addSamagri(p._id)}
-                          className="w-full flex items-center gap-3 p-3 hover:bg-orange-50 text-left border-b last:border-0"
-                        >
-                          {(p.images?.[0] || p.image || p.mainImage) ? (
-                            <img src={p.images?.[0] || p.image || p.mainImage} alt="" className="w-10 h-10 rounded object-cover" />
-                          ) : (
-                            <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">📦</div>
-                          )}
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">{typeof p.name === 'string' ? p.name : (p.name?.english || p.name?.hindi || 'Product')}</div>
-                            {(p.nameHindi || p.name?.hindi) && <div className="text-xs text-gray-500">{p.nameHindi || p.name?.hindi}</div>}
-                          </div>
-                          <span className="text-orange-600 font-medium">₹{p.discountPrice || p.price}</span>
-                        </button>
-                      ))}
+                      {filteredProducts.slice(0, 10).map(p => {
+                        const displayName = typeof p.name === 'string' ? p.name : (p.name?.english || p.name?.hindi || p.name?.en || p.name?.hi || 'Product');
+                        const hindiName = p.nameHindi || p.name?.hindi || p.name?.hi || '';
+                        return (
+                          <button
+                            key={p._id}
+                            type="button"
+                            onClick={() => addSamagri(p._id)}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-orange-50 text-left border-b last:border-0"
+                          >
+                            {(p.images?.[0] || p.image || p.mainImage) ? (
+                              <img src={p.images?.[0] || p.image || p.mainImage} alt="" className="w-10 h-10 rounded object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">📦</div>
+                            )}
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{displayName}</div>
+                              {hindiName && displayName !== hindiName && <div className="text-xs text-gray-500">{hindiName}</div>}
+                            </div>
+                            <span className="text-orange-600 font-medium">₹{p.discountPrice || p.price}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

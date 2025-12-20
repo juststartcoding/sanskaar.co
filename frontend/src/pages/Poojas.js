@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { poojaAPI } from "../services/api";
-import { Search, Filter, Star, Calendar, BookOpen, Loader } from "lucide-react";
+import { Search, Filter, Star, Clock, BookOpen, Loader, Users } from "lucide-react";
 
 const Poojas = () => {
   const [poojas, setPoojas] = useState([]);
   const [filteredPoojas, setFilteredPoojas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
   useEffect(() => {
     loadPoojas();
@@ -16,46 +16,30 @@ const Poojas = () => {
 
   useEffect(() => {
     filterPoojas();
-  }, [searchTerm, selectedLanguage, poojas]);
+  }, [searchTerm, selectedCategory, poojas]);
 
   const loadPoojas = async () => {
     try {
       setLoading(true);
-      console.log("🔍 Loading poojas from: /api/poojas");
-
       const response = await poojaAPI.getAll();
-      console.log("📦 Raw response:", response);
-      console.log("📊 Response data:", response.data);
-
-      // Backend returns: { success: true, data: [...], totalPages, currentPage }
-      // Extract poojas from response.data.data
+      
       let poojasData = [];
-
       if (response.data) {
-        // Check different response formats
         if (Array.isArray(response.data)) {
-          // Format 1: Direct array
           poojasData = response.data;
         } else if (response.data.data && Array.isArray(response.data.data)) {
-          // Format 2: { data: [...] }
           poojasData = response.data.data;
-        } else if (
-          response.data.poojas &&
-          Array.isArray(response.data.poojas)
-        ) {
-          // Format 3: { poojas: [...] }
+        } else if (response.data.poojas && Array.isArray(response.data.poojas)) {
           poojasData = response.data.poojas;
+        } else if (response.data.templates && Array.isArray(response.data.templates)) {
+          poojasData = response.data.templates;
         }
       }
-
-      console.log("✅ Poojas loaded:", poojasData.length);
-      console.log("📋 First pooja:", poojasData[0]);
 
       setPoojas(poojasData);
       setFilteredPoojas(poojasData);
     } catch (error) {
-      console.error("❌ Failed to load poojas:", error);
-      console.error("❌ Error response:", error.response?.data);
+      console.error("Failed to load poojas:", error);
       setPoojas([]);
       setFilteredPoojas([]);
     } finally {
@@ -73,36 +57,64 @@ const Poojas = () => {
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(
-        (pooja) =>
-          (pooja.poojaType || "")
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          (pooja.importance?.english || "")
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          (pooja.importance?.hindi || "")
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())
-      );
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter((pooja) => {
+        const nameHi = pooja.name?.hi || pooja.poojaName?.hi || "";
+        const nameEn = pooja.name?.en || pooja.poojaName?.en || pooja.poojaType || "";
+        const descHi = pooja.description?.hi || pooja.importance?.hindi || "";
+        const descEn = pooja.description?.en || pooja.importance?.english || "";
+        
+        return nameHi.includes(searchTerm) ||
+               nameEn.toLowerCase().includes(term) ||
+               descHi.includes(searchTerm) ||
+               descEn.toLowerCase().includes(term);
+      });
     }
 
-    // Language filter
-    if (selectedLanguage !== "all") {
-      filtered = filtered.filter(
-        (pooja) => pooja.poojaLanguage === selectedLanguage
-      );
+    // Category filter
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((pooja) => pooja.category === selectedCategory);
     }
 
     setFilteredPoojas(filtered);
   };
 
-  const languages = [
-    { value: "all", label: "All Languages" },
-    { value: "hindi", label: "हिंदी" },
-    { value: "sanskrit", label: "संस्कृत" },
-    { value: "english", label: "English" },
+  const categories = [
+    { value: "all", label: "All Categories" },
+    { value: "DAILY", label: "Daily Poojas" },
+    { value: "FESTIVAL", label: "Festival Poojas" },
+    { value: "SPECIAL", label: "Special Occasions" },
+    { value: "NAVAGRAHA", label: "Navagraha" },
+    { value: "SANATAN", label: "Sanatan" },
   ];
+
+  // Helper to get display name
+  const getDisplayName = (pooja) => {
+    if (pooja.name?.hi) return pooja.name.hi;
+    if (pooja.poojaName?.hi) return pooja.poojaName.hi;
+    return pooja.poojaType || "Pooja";
+  };
+
+  const getEnglishName = (pooja) => {
+    if (pooja.name?.en) return pooja.name.en;
+    if (pooja.poojaName?.en) return pooja.poojaName.en;
+    return pooja.poojaType || "";
+  };
+
+  const getDescription = (pooja) => {
+    return pooja.short_description?.en || 
+           pooja.description?.en || 
+           pooja.importance?.english || 
+           pooja.short_description?.hi ||
+           pooja.description?.hi ||
+           "Traditional Hindu ritual";
+  };
+
+  const getStepsCount = (pooja) => {
+    if (pooja.templateSteps) return pooja.templateSteps.length;
+    if (pooja.steps?.hindi) return pooja.steps.hindi.length;
+    return 0;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -113,8 +125,7 @@ const Poojas = () => {
             🕉️ Discover Authentic Poojas
           </h1>
           <p className="text-xl text-orange-100 max-w-2xl mx-auto">
-            Step-by-step guidance for traditional Hindu rituals with mantras and
-            meanings
+            Step-by-step guidance for traditional Hindu rituals with mantras and meanings
           </p>
         </div>
       </div>
@@ -135,16 +146,16 @@ const Poojas = () => {
               />
             </div>
 
-            {/* Language Filter */}
+            {/* Category Filter */}
             <div>
               <select
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
               >
-                {languages.map((lang) => (
-                  <option key={lang.value} value={lang.value}>
-                    {lang.label}
+                {categories.map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
                   </option>
                 ))}
               </select>
@@ -174,14 +185,6 @@ const Poojas = () => {
                 ? "No poojas available yet. Check back soon!"
                 : "Try adjusting your search or filters"}
             </p>
-            {poojas.length === 0 && (
-              <Link
-                to="/admin/poojas"
-                className="inline-block px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-              >
-                Add First Pooja (Admin)
-              </Link>
-            )}
           </div>
         ) : (
           /* Pooja Grid */
@@ -190,35 +193,51 @@ const Poojas = () => {
               <Link
                 key={pooja._id}
                 to={`/pooja/${pooja._id}`}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300"
+                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
               >
-                {/* Pooja Card */}
-                <div className="h-48 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <div className="text-6xl mb-2">🕉️</div>
-                    <h3 className="text-2xl font-bold">{pooja.poojaType}</h3>
-                  </div>
+                {/* Pooja Card Image */}
+                <div className="h-48 relative">
+                  {pooja.main_image_url || pooja.thumbnail_url ? (
+                    <img 
+                      src={pooja.main_image_url || pooja.thumbnail_url} 
+                      alt={getDisplayName(pooja)}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
+                      <div className="text-center text-white">
+                        <div className="text-6xl mb-2">🕉️</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Featured Badge */}
+                  {pooja.isFeatured && (
+                    <div className="absolute top-3 right-3 px-3 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">
+                      ⭐ Featured
+                    </div>
+                  )}
+                  
+                  {/* Category Badge */}
+                  {pooja.category && (
+                    <div className="absolute bottom-3 left-3 px-3 py-1 bg-black/60 text-white text-xs rounded-full">
+                      {pooja.category}
+                    </div>
+                  )}
                 </div>
 
-                <div className="p-6">
-                  {/* Language Badge */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                      {pooja.poojaLanguage}
-                    </span>
-                    {pooja.isActive && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Active
-                      </span>
-                    )}
-                  </div>
+                <div className="p-5">
+                  {/* Title */}
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">
+                    {getDisplayName(pooja)}
+                  </h3>
+                  <p className="text-sm text-orange-600 mb-3">
+                    {getEnglishName(pooja)}
+                  </p>
 
-                  {/* Importance */}
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                    {pooja.importance?.english ||
-                      pooja.importance?.hindi ||
-                      pooja.importance?.sanskrit ||
-                      "Traditional Hindu ritual"}
+                  {/* Description */}
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {getDescription(pooja)}
                   </p>
 
                   {/* Stats */}
@@ -226,24 +245,30 @@ const Poojas = () => {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
                         <BookOpen className="w-4 h-4" />
-                        <span>
-                          {(pooja.steps?.hindi?.length || 0) +
-                            (pooja.steps?.sanskrit?.length || 0) +
-                            (pooja.steps?.english?.length || 0)}{" "}
-                          steps
-                        </span>
+                        <span>{getStepsCount(pooja)} steps</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-500" />
-                        <span>
-                          {pooja.ratings?.average?.toFixed(1) || "0.0"}
-                        </span>
+                        <Clock className="w-4 h-4" />
+                        <span>{pooja.total_duration_minutes || 30} min</span>
                       </div>
                     </div>
-                    <div className="text-orange-600 font-semibold">
-                      View Details →
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                      <span>{pooja.ratings?.average?.toFixed(1) || "5.0"}</span>
                     </div>
                   </div>
+
+                  {/* Deity Info */}
+                  {pooja.deity && (
+                    <div className="mt-3 pt-3 border-t flex items-center gap-2">
+                      {pooja.deity.icon_url && (
+                        <img src={pooja.deity.icon_url} alt="" className="w-6 h-6 rounded-full" />
+                      )}
+                      <span className="text-sm text-gray-600">
+                        {pooja.deity.name?.hi || pooja.deity.name?.en}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </Link>
             ))}

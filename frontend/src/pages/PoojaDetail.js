@@ -319,6 +319,12 @@ const PoojaDetail = () => {
                     {pooja.category}
                   </span>
                 )}
+                {/* NEW: Pooja Vidhi Type Badge */}
+                {pooja.pooja_vidhi_type && (
+                  <span className="px-3 py-1 bg-purple-500/50 rounded-full text-sm font-medium">
+                    {pooja.pooja_vidhi_type_name?.hi || pooja.pooja_vidhi_type}
+                  </span>
+                )}
                 {pooja.difficulty_level && (
                   <span className="px-3 py-1 bg-white/20 rounded-full text-sm">
                     {pooja.difficulty_level}
@@ -629,7 +635,7 @@ const PoojaDetail = () => {
                       <button
                         onClick={() =>
                           setCurrentStep(
-                            Math.min(currentSteps.length - 1, currentStep + 1)
+                            Math.min(currentSteps.length - 1, currentStep + 1),
                           )
                         }
                         disabled={currentStep === currentSteps.length - 1}
@@ -725,7 +731,7 @@ const PoojaDetail = () => {
                       (sum, item) =>
                         sum +
                         getProductPrice(item) * (parseInt(item.quantity) || 1),
-                      0
+                      0,
                     )}
                   </span>
                 </div>
@@ -772,6 +778,49 @@ const PoojaDetail = () => {
                 </div>
               </div>
             </div>
+
+            {/* NEW: Pooja ka Mahatva Section */}
+            {(pooja.mahatva?.hi ||
+              pooja.mahatva?.en ||
+              pooja.mahatva_points?.length > 0) && (
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg p-6 border-2 border-purple-200">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-600" />
+                  पूजा का महत्व (Importance)
+                </h3>
+                {(pooja.mahatva?.hi || pooja.mahatva?.en) && (
+                  <p className="text-gray-700 mb-4 leading-relaxed">
+                    {selectedLanguage === "hindi"
+                      ? pooja.mahatva?.hi
+                      : pooja.mahatva?.en || pooja.mahatva?.hi}
+                  </p>
+                )}
+                {pooja.mahatva_points && pooja.mahatva_points.length > 0 && (
+                  <div className="space-y-3">
+                    {pooja.mahatva_points.map((point, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-3 bg-white rounded-lg"
+                      >
+                        <span className="text-xl">{point.icon || "✨"}</span>
+                        <div>
+                          <p className="font-medium text-purple-700">
+                            {selectedLanguage === "hindi"
+                              ? point.title?.hi
+                              : point.title?.en || point.title?.hi}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {selectedLanguage === "hindi"
+                              ? point.description?.hi
+                              : point.description?.en || point.description?.hi}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Rate This Pooja */}
             <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-lg p-6 border-2 border-yellow-200">

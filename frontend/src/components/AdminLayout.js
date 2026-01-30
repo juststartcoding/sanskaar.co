@@ -25,6 +25,7 @@ import {
   Sparkles,
   ScrollText,
   FileText,
+  Calendar,
 } from "lucide-react";
 import api from "../services/api";
 
@@ -112,7 +113,16 @@ const AdminLayout = ({ children }) => {
     { title: "Mantras", icon: Music, path: "/admin/master/mantras" },
     { title: "Deities", icon: Sparkles, path: "/admin/master/deities" },
     { title: "Aartis", icon: Music, path: "/admin/master/aartis" },
-    { title: "Pooja Templates", icon: FileText, path: "/admin/master/templates" },
+    {
+      title: "Pooja Templates",
+      icon: FileText,
+      path: "/admin/master/templates",
+    },
+    {
+      title: "Muhurat Calendar",
+      icon: Calendar,
+      path: "/admin/master/muhurat-calendar",
+    },
   ];
 
   const handleLogout = () => {
@@ -123,7 +133,10 @@ const AdminLayout = ({ children }) => {
 
   const isActive = (path) => {
     if (path === "/admin/dashboard") {
-      return location.pathname === "/admin/dashboard" || location.pathname === "/admin";
+      return (
+        location.pathname === "/admin/dashboard" ||
+        location.pathname === "/admin"
+      );
     }
     return location.pathname.startsWith(path);
   };
@@ -165,7 +178,11 @@ const AdminLayout = ({ children }) => {
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="p-2 hover:bg-orange-500/30 rounded-lg transition-colors hidden md:block"
             >
-              <ChevronLeft className={`w-5 h-5 transition-transform ${sidebarCollapsed ? "rotate-180" : ""}`} />
+              <ChevronLeft
+                className={`w-5 h-5 transition-transform ${
+                  sidebarCollapsed ? "rotate-180" : ""
+                }`}
+              />
             </button>
           </div>
         </div>
@@ -230,10 +247,16 @@ const AdminLayout = ({ children }) => {
                 }`}
               >
                 <Database className="w-5 h-5 flex-shrink-0" />
-                <span className="flex-1 font-medium text-left">Master Data</span>
-                <ChevronRight className={`w-4 h-4 transition-transform ${masterDataOpen ? "rotate-90" : ""}`} />
+                <span className="flex-1 font-medium text-left">
+                  Master Data
+                </span>
+                <ChevronRight
+                  className={`w-4 h-4 transition-transform ${
+                    masterDataOpen ? "rotate-90" : ""
+                  }`}
+                />
               </button>
-              
+
               {masterDataOpen && (
                 <div className="mt-1 ml-4 border-l-2 border-white/20 pl-2">
                   {masterDataItems.map((item) => {
@@ -288,9 +311,15 @@ const AdminLayout = ({ children }) => {
                   <p className="font-semibold text-sm truncate">
                     {user.name || "Admin"}
                   </p>
-                  <p className="text-xs text-orange-200 truncate">{user.email}</p>
+                  <p className="text-xs text-orange-200 truncate">
+                    {user.email}
+                  </p>
                 </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${
+                    userMenuOpen ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
               {/* User Dropdown */}
@@ -327,7 +356,11 @@ const AdminLayout = ({ children }) => {
       </aside>
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col overflow-hidden ${sidebarCollapsed ? "ml-20" : "ml-64"} transition-all duration-300`}>
+      <div
+        className={`flex-1 flex flex-col overflow-hidden ${
+          sidebarCollapsed ? "ml-20" : "ml-64"
+        } transition-all duration-300`}
+      >
         {/* Top Bar */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
           <div className="flex items-center justify-between px-6 py-4">
@@ -346,7 +379,8 @@ const AdminLayout = ({ children }) => {
                   <span>Admin</span>
                   <span className="mx-2">/</span>
                   <span className="text-gray-900 font-medium capitalize">
-                    {location.pathname.split("/").pop().replace("-", " ") || "Dashboard"}
+                    {location.pathname.split("/").pop().replace("-", " ") ||
+                      "Dashboard"}
                   </span>
                 </nav>
               </div>

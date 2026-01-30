@@ -35,7 +35,7 @@ import SanskritLearning from "./pages/SanskritLearning";
 import FamilyTree from "./pages/FamilyTree";
 import OrderSuccess from "./pages/OrderSuccess";
 import MyOrders from "./pages/MyOrders";
-
+import MuhuratCalendarMaster from "./pages/admin/MuhuratCalendarMaster";
 // User Dashboard
 import UserDashboard from "./pages/UserDashboard";
 
@@ -205,10 +205,7 @@ function AppContent() {
         }
       />
       {/* Pooja Step-by-Step Player */}
-      <Route
-        path="/pooja-player/:id"
-        element={<PoojaPlayer />}
-      />
+      <Route path="/pooja-player/:id" element={<PoojaPlayer />} />
       <Route
         path="/shop"
         element={
@@ -617,6 +614,10 @@ function AppContent() {
             </AdminLayout>
           </AdminRoute>
         }
+      />
+      <Route
+        path="/admin/master/muhurat-calendar"
+        element={<MuhuratCalendarMaster />}
       />
 
       {/* ============================================ */}

@@ -74,9 +74,55 @@ const poojaTemplateSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["DAILY", "FESTIVAL", "SPECIAL", "OCCASION", "NAVAGRAHA", "SANATAN"],
+      enum: [
+        "DAILY",
+        "FESTIVAL",
+        "SPECIAL",
+        "OCCASION",
+        "NAVAGRAHA",
+        "SANATAN",
+      ],
       default: "DAILY",
     },
+    // NEW: Pooja Vidhi Type
+    pooja_vidhi_type: {
+      type: String,
+      enum: [
+        "SHODASHOPCHAR", // 16 step pooja
+        "PANCHOPCHAR", // 5 step pooja
+        "DASHOPCHAR", // 10 step pooja
+        "SAMANYA", // Simple pooja
+        "VISHESH", // Special pooja
+        "TANTRIC", // Tantric vidhi
+        "VEDIC", // Vedic vidhi
+        "PURANIC", // Puranic vidhi
+        "AGAMIC", // Agamic vidhi
+        "CUSTOM", // Custom
+      ],
+      default: "SAMANYA",
+    },
+    pooja_vidhi_type_name: {
+      hi: { type: String, default: "" },
+      en: { type: String, default: "" },
+    },
+    // NEW: Pooja ka Mahatva (Importance/Significance)
+    mahatva: {
+      hi: { type: String, default: "" },
+      en: { type: String, default: "" },
+    },
+    mahatva_points: [
+      {
+        title: {
+          hi: { type: String, default: "" },
+          en: { type: String, default: "" },
+        },
+        description: {
+          hi: { type: String, default: "" },
+          en: { type: String, default: "" },
+        },
+        icon: { type: String, default: "✨" },
+      },
+    ],
     short_description: {
       hi: { type: String, default: "" },
       en: { type: String, default: "" },
@@ -143,7 +189,7 @@ const poojaTemplateSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Pre-save hook for slug
@@ -159,7 +205,10 @@ poojaTemplateSchema.pre("save", function (next) {
 
 // Calculate total duration from steps
 poojaTemplateSchema.methods.calculateTotalDuration = function () {
-  return this.steps.reduce((total, step) => total + (step.duration_minutes || 5), 0);
+  return this.steps.reduce(
+    (total, step) => total + (step.duration_minutes || 5),
+    0,
+  );
 };
 
 // Indexes

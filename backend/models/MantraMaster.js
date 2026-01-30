@@ -53,8 +53,44 @@ const mantraMasterSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["GENERAL", "DEITY_SPECIFIC", "OCCASION", "MORNING", "EVENING", "PROTECTION", "HEALING", "PROSPERITY"],
+      enum: [
+        "GENERAL",
+        "DEITY_SPECIFIC",
+        "OCCASION",
+        "MORNING",
+        "EVENING",
+        "PROTECTION",
+        "HEALING",
+        "PROSPERITY",
+      ],
       default: "GENERAL",
+    },
+    // NEW: Mantra Type (more specific classification)
+    mantra_type: {
+      type: String,
+      enum: [
+        "BEEJ", // Beej Mantra (seed mantras like ॐ, ह्रीं, श्रीं)
+        "STOTRA", // Stotra (hymns)
+        "SHLOKA", // Shloka (verses)
+        "SUKTA", // Sukta (Vedic hymns)
+        "KAVACH", // Kavach (protective mantras)
+        "STUTI", // Stuti (praise)
+        "CHALISA", // Chalisa (40 verses)
+        "AARTI", // Aarti
+        "GAYATRI", // Gayatri mantras
+        "TANTRIC", // Tantric mantras
+        "MAHAMANTRA", // Maha mantras
+        "SANKALP", // Sankalp mantras
+        "PRARTHANA", // Prayer mantras
+        "JAAP", // Jaap mantras
+        "DHYAN", // Dhyan/Meditation mantras
+        "OTHER", // Other
+      ],
+      default: "SHLOKA",
+    },
+    mantra_type_name: {
+      hi: { type: String, default: "" },
+      en: { type: String, default: "" },
     },
     isActive: {
       type: Boolean,
@@ -67,7 +103,7 @@ const mantraMasterSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Indexes

@@ -1,7 +1,11 @@
 const express = require("express");
 const multer = require("multer");
 const { authenticate, adminOnly } = require("../middleware/auth");
-const { uploadToCloud, uploadFromBuffer, deleteFromCloud } = require("../services/cloudinaryService");
+const {
+  uploadToCloud,
+  uploadFromBuffer,
+  deleteFromCloud,
+} = require("../services/cloudinaryService");
 
 // Models
 const PoojaStepMaster = require("../models/PoojaStepMaster");
@@ -9,6 +13,7 @@ const MantraMaster = require("../models/MantraMaster");
 const DeityMaster = require("../models/DeityMaster");
 const AartiMaster = require("../models/AartiMaster");
 const PoojaTemplate = require("../models/PoojaTemplate");
+const MuhuratCalendar = require("../models/MuhuratCalendar");
 
 const router = express.Router();
 
@@ -47,11 +52,13 @@ router.use(adminOnly);
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: "No file provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No file provided" });
     }
 
     const { type = "image", folder } = req.body;
-    
+
     // Determine file type from mimetype
     let fileType = type;
     if (req.file.mimetype.startsWith("audio")) {
@@ -93,7 +100,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 router.get("/steps", async (req, res) => {
   try {
     const { page = 1, limit = 50, search, active } = req.query;
-    
+
     const query = {};
     if (search) {
       query.$or = [
@@ -130,7 +137,9 @@ router.get("/steps/:id", async (req, res) => {
   try {
     const step = await PoojaStepMaster.findById(req.params.id);
     if (!step) {
-      return res.status(404).json({ success: false, message: "Step not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Step not found" });
     }
     res.json({ success: true, step });
   } catch (error) {
@@ -141,15 +150,37 @@ router.get("/steps/:id", async (req, res) => {
 // Create step
 router.post("/steps", async (req, res) => {
   try {
-    const { step_code, title, instruction, description, icon_url, image_url, audio_url, video_url, is_mandatory, order_hint, duration_minutes, background_color } = req.body;
+    const {
+      step_code,
+      title,
+      instruction,
+      description,
+      icon_url,
+      image_url,
+      audio_url,
+      video_url,
+      is_mandatory,
+      order_hint,
+      duration_minutes,
+      background_color,
+    } = req.body;
 
     if (!step_code || !title?.hi || !title?.en) {
-      return res.status(400).json({ success: false, message: "step_code, title.hi, and title.en are required" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "step_code, title.hi, and title.en are required",
+        });
     }
 
-    const existing = await PoojaStepMaster.findOne({ step_code: step_code.toUpperCase() });
+    const existing = await PoojaStepMaster.findOne({
+      step_code: step_code.toUpperCase(),
+    });
     if (existing) {
-      return res.status(400).json({ success: false, message: "Step code already exists" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Step code already exists" });
     }
 
     const step = new PoojaStepMaster({
@@ -181,11 +212,13 @@ router.put("/steps/:id", async (req, res) => {
     const step = await PoojaStepMaster.findByIdAndUpdate(
       req.params.id,
       { ...req.body },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!step) {
-      return res.status(404).json({ success: false, message: "Step not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Step not found" });
     }
 
     res.json({ success: true, message: "Step updated", step });
@@ -199,14 +232,15 @@ router.delete("/steps/:id", async (req, res) => {
   try {
     const step = await PoojaStepMaster.findByIdAndDelete(req.params.id);
     if (!step) {
-      return res.status(404).json({ success: false, message: "Step not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Step not found" });
     }
     res.json({ success: true, message: "Step deleted" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
-
 
 // Legacy routes removed - use /steps endpoints instead
 // The /steps endpoints support the new nested title/instruction format
@@ -218,7 +252,7 @@ router.delete("/steps/:id", async (req, res) => {
 router.get("/mantras", async (req, res) => {
   try {
     const { page = 1, limit = 50, search, category, deity } = req.query;
-    
+
     const query = { isActive: true };
     if (search) {
       query.$or = [
@@ -252,9 +286,13 @@ router.get("/mantras", async (req, res) => {
 
 router.get("/mantras/:id", async (req, res) => {
   try {
-    const mantra = await MantraMaster.findById(req.params.id).populate("deity_id");
+    const mantra = await MantraMaster.findById(req.params.id).populate(
+      "deity_id",
+    );
     if (!mantra) {
-      return res.status(404).json({ success: false, message: "Mantra not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Mantra not found" });
     }
     res.json({ success: true, mantra });
   } catch (error) {
@@ -264,17 +302,36 @@ router.get("/mantras/:id", async (req, res) => {
 
 router.post("/mantras", async (req, res) => {
   try {
-    const { mantra_name, mantra_code, text, meaning, audio_url, video_url, duration_sec, repeat_allowed, default_repeat, safe_for_all, deity_id, category } = req.body;
+    const {
+      mantra_name,
+      mantra_code,
+      text,
+      meaning,
+      audio_url,
+      video_url,
+      duration_sec,
+      repeat_allowed,
+      default_repeat,
+      safe_for_all,
+      deity_id,
+      category,
+    } = req.body;
 
     if (!mantra_name) {
-      return res.status(400).json({ success: false, message: "mantra_name is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "mantra_name is required" });
     }
 
     // Check for duplicate code
     if (mantra_code) {
-      const existing = await MantraMaster.findOne({ mantra_code: mantra_code.toUpperCase() });
+      const existing = await MantraMaster.findOne({
+        mantra_code: mantra_code.toUpperCase(),
+      });
       if (existing) {
-        return res.status(400).json({ success: false, message: "Mantra code already exists" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Mantra code already exists" });
       }
     }
 
@@ -296,7 +353,7 @@ router.post("/mantras", async (req, res) => {
 
     await mantra.save();
     await mantra.populate("deity_id", "name");
-    
+
     res.status(201).json({ success: true, message: "Mantra created", mantra });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -308,11 +365,13 @@ router.put("/mantras/:id", async (req, res) => {
     const mantra = await MantraMaster.findByIdAndUpdate(
       req.params.id,
       { ...req.body },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).populate("deity_id", "name");
 
     if (!mantra) {
-      return res.status(404).json({ success: false, message: "Mantra not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Mantra not found" });
     }
 
     res.json({ success: true, message: "Mantra updated", mantra });
@@ -325,7 +384,9 @@ router.delete("/mantras/:id", async (req, res) => {
   try {
     const mantra = await MantraMaster.findByIdAndDelete(req.params.id);
     if (!mantra) {
-      return res.status(404).json({ success: false, message: "Mantra not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Mantra not found" });
     }
     res.json({ success: true, message: "Mantra deleted" });
   } catch (error) {
@@ -340,7 +401,7 @@ router.delete("/mantras/:id", async (req, res) => {
 router.get("/deities", async (req, res) => {
   try {
     const { search } = req.query;
-    
+
     const query = { isActive: true };
     if (search) {
       query.$or = [
@@ -362,9 +423,13 @@ router.get("/deities", async (req, res) => {
 
 router.get("/deities/:id", async (req, res) => {
   try {
-    const deity = await DeityMaster.findById(req.params.id).populate("default_mantra_id");
+    const deity = await DeityMaster.findById(req.params.id).populate(
+      "default_mantra_id",
+    );
     if (!deity) {
-      return res.status(404).json({ success: false, message: "Deity not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Deity not found" });
     }
     res.json({ success: true, deity });
   } catch (error) {
@@ -374,17 +439,33 @@ router.get("/deities/:id", async (req, res) => {
 
 router.post("/deities", async (req, res) => {
   try {
-    const { deity_code, name, description, icon_url, image_url, default_mantra_id, day_of_worship, associated_color, category } = req.body;
+    const {
+      deity_code,
+      name,
+      description,
+      icon_url,
+      image_url,
+      default_mantra_id,
+      day_of_worship,
+      associated_color,
+      category,
+    } = req.body;
 
     if (!name?.hi || !name?.en) {
-      return res.status(400).json({ success: false, message: "name.hi and name.en are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "name.hi and name.en are required" });
     }
 
     // Check for duplicate code
     if (deity_code) {
-      const existing = await DeityMaster.findOne({ deity_code: deity_code.toUpperCase() });
+      const existing = await DeityMaster.findOne({
+        deity_code: deity_code.toUpperCase(),
+      });
       if (existing) {
-        return res.status(400).json({ success: false, message: "Deity code already exists" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Deity code already exists" });
       }
     }
 
@@ -413,11 +494,13 @@ router.put("/deities/:id", async (req, res) => {
     const deity = await DeityMaster.findByIdAndUpdate(
       req.params.id,
       { ...req.body },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!deity) {
-      return res.status(404).json({ success: false, message: "Deity not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Deity not found" });
     }
 
     res.json({ success: true, message: "Deity updated", deity });
@@ -430,7 +513,9 @@ router.delete("/deities/:id", async (req, res) => {
   try {
     const deity = await DeityMaster.findByIdAndDelete(req.params.id);
     if (!deity) {
-      return res.status(404).json({ success: false, message: "Deity not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Deity not found" });
     }
     res.json({ success: true, message: "Deity deleted" });
   } catch (error) {
@@ -445,7 +530,7 @@ router.delete("/deities/:id", async (req, res) => {
 router.get("/aartis", async (req, res) => {
   try {
     const { deity, search } = req.query;
-    
+
     const query = { isActive: true };
     if (deity) query.deity_id = deity;
     if (search) {
@@ -468,9 +553,13 @@ router.get("/aartis", async (req, res) => {
 
 router.get("/aartis/:id", async (req, res) => {
   try {
-    const aarti = await AartiMaster.findById(req.params.id).populate("deity_id");
+    const aarti = await AartiMaster.findById(req.params.id).populate(
+      "deity_id",
+    );
     if (!aarti) {
-      return res.status(404).json({ success: false, message: "Aarti not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Aarti not found" });
     }
     res.json({ success: true, aarti });
   } catch (error) {
@@ -480,17 +569,35 @@ router.get("/aartis/:id", async (req, res) => {
 
 router.post("/aartis", async (req, res) => {
   try {
-    const { aarti_code, title, deity_id, lyrics, audio_url, video_url, duration_sec, time_of_day } = req.body;
+    const {
+      aarti_code,
+      title,
+      deity_id,
+      lyrics,
+      audio_url,
+      video_url,
+      duration_sec,
+      time_of_day,
+    } = req.body;
 
     if (!title?.hi || !title?.en) {
-      return res.status(400).json({ success: false, message: "title.hi and title.en are required" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "title.hi and title.en are required",
+        });
     }
 
     // Check for duplicate aarti_code
     if (aarti_code) {
-      const existing = await AartiMaster.findOne({ aarti_code: aarti_code.toUpperCase() });
+      const existing = await AartiMaster.findOne({
+        aarti_code: aarti_code.toUpperCase(),
+      });
       if (existing) {
-        return res.status(400).json({ success: false, message: "Aarti code already exists" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Aarti code already exists" });
       }
     }
 
@@ -508,7 +615,7 @@ router.post("/aartis", async (req, res) => {
 
     await aarti.save();
     await aarti.populate("deity_id", "name icon_url");
-    
+
     res.status(201).json({ success: true, message: "Aarti created", aarti });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -520,11 +627,13 @@ router.put("/aartis/:id", async (req, res) => {
     const aarti = await AartiMaster.findByIdAndUpdate(
       req.params.id,
       { ...req.body },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).populate("deity_id", "name icon_url");
 
     if (!aarti) {
-      return res.status(404).json({ success: false, message: "Aarti not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Aarti not found" });
     }
 
     res.json({ success: true, message: "Aarti updated", aarti });
@@ -537,7 +646,9 @@ router.delete("/aartis/:id", async (req, res) => {
   try {
     const aarti = await AartiMaster.findByIdAndDelete(req.params.id);
     if (!aarti) {
-      return res.status(404).json({ success: false, message: "Aarti not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Aarti not found" });
     }
     res.json({ success: true, message: "Aarti deleted" });
   } catch (error) {
@@ -551,8 +662,15 @@ router.delete("/aartis/:id", async (req, res) => {
 
 router.get("/pooja-templates", async (req, res) => {
   try {
-    const { page = 1, limit = 20, search, category, deity, featured } = req.query;
-    
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      category,
+      deity,
+      featured,
+    } = req.query;
+
     const query = {};
     if (search) {
       query.$or = [
@@ -595,7 +713,9 @@ router.get("/pooja-templates/:id", async (req, res) => {
       .populate("samagri_list.product_id");
 
     if (!template) {
-      return res.status(404).json({ success: false, message: "Template not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Template not found" });
     }
 
     res.json({ success: true, template });
@@ -613,7 +733,7 @@ const sanitizeObjectId = (value) => {
 // Sanitize steps array
 const sanitizeSteps = (steps) => {
   if (!steps || !Array.isArray(steps)) return [];
-  return steps.map(step => ({
+  return steps.map((step) => ({
     ...step,
     step_id: sanitizeObjectId(step.step_id),
     mantra_id: sanitizeObjectId(step.mantra_id),
@@ -623,7 +743,7 @@ const sanitizeSteps = (steps) => {
 // Sanitize samagri list
 const sanitizeSamagriList = (list) => {
   if (!list || !Array.isArray(list)) return [];
-  return list.map(item => ({
+  return list.map((item) => ({
     ...item,
     product_id: sanitizeObjectId(item.product_id),
   }));
@@ -632,9 +752,11 @@ const sanitizeSamagriList = (list) => {
 router.post("/pooja-templates", async (req, res) => {
   try {
     const { name, steps, samagri_list, deity_id, aarti_id } = req.body;
-    
+
     if (!name?.hi || !name?.en) {
-      return res.status(400).json({ success: false, message: "name.hi and name.en are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "name.hi and name.en are required" });
     }
 
     // Sanitize the data before saving
@@ -650,11 +772,13 @@ router.post("/pooja-templates", async (req, res) => {
     const template = new PoojaTemplate(sanitizedData);
 
     await template.save();
-    
+
     // Populate for response
     await template.populate("deity_id", "name");
 
-    res.status(201).json({ success: true, message: "Template created", template });
+    res
+      .status(201)
+      .json({ success: true, message: "Template created", template });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -676,11 +800,13 @@ router.put("/pooja-templates/:id", async (req, res) => {
     const template = await PoojaTemplate.findByIdAndUpdate(
       req.params.id,
       sanitizedData,
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).populate("deity_id", "name");
 
     if (!template) {
-      return res.status(404).json({ success: false, message: "Template not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Template not found" });
     }
 
     res.json({ success: true, message: "Template updated", template });
@@ -693,9 +819,291 @@ router.delete("/pooja-templates/:id", async (req, res) => {
   try {
     const template = await PoojaTemplate.findByIdAndDelete(req.params.id);
     if (!template) {
-      return res.status(404).json({ success: false, message: "Template not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Template not found" });
     }
     res.json({ success: true, message: "Template deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ============================================
+// MUHURAT CALENDAR CRUD
+// ============================================
+
+// Get all muhurat entries (with filters)
+router.get("/muhurat-calendar", async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 31,
+      startDate,
+      endDate,
+      tithi,
+      paksha,
+      masa,
+      tarpan_only,
+      festival_only,
+      city,
+    } = req.query;
+
+    const query = { isActive: true };
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
+    }
+
+    // Hindu calendar filters
+    if (tithi) query["hindu_date.tithi"] = tithi;
+    if (paksha) query["hindu_date.paksha"] = paksha;
+    if (masa) query["hindu_date.masa"] = masa;
+
+    // Special day filters
+    if (tarpan_only === "true") query["tarpan_info.is_tarpan_day"] = true;
+    if (festival_only === "true") query["festival.is_festival"] = true;
+
+    // Location filter
+    if (city) query["location.city"] = city;
+
+    const entries = await MuhuratCalendar.find(query)
+      .populate("recommended_poojas.pooja_id", "name thumbnail_url")
+      .sort({ date: 1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await MuhuratCalendar.countDocuments(query);
+
+    res.json({
+      success: true,
+      entries,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get single muhurat entry by ID
+router.get("/muhurat-calendar/:id", async (req, res) => {
+  try {
+    const entry = await MuhuratCalendar.findById(req.params.id).populate(
+      "recommended_poojas.pooja_id",
+      "name thumbnail_url main_image_url",
+    );
+
+    if (!entry) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Entry not found" });
+    }
+    res.json({ success: true, entry });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get muhurat entry by date
+router.get("/muhurat-calendar/date/:date", async (req, res) => {
+  try {
+    const { date } = req.params;
+    const { city = "Delhi" } = req.query;
+
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const entry = await MuhuratCalendar.findOne({
+      date: { $gte: startOfDay, $lte: endOfDay },
+      "location.city": city,
+    }).populate(
+      "recommended_poojas.pooja_id",
+      "name thumbnail_url main_image_url",
+    );
+
+    if (!entry) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No entry for this date" });
+    }
+    res.json({ success: true, entry });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Create muhurat entry
+router.post("/muhurat-calendar", async (req, res) => {
+  try {
+    const { date, hindu_date, location } = req.body;
+
+    if (
+      !date ||
+      !hindu_date?.tithi ||
+      !hindu_date?.paksha ||
+      !hindu_date?.masa
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "date, hindu_date.tithi, hindu_date.paksha, and hindu_date.masa are required",
+      });
+    }
+
+    // Check for duplicate
+    const existingDate = new Date(date);
+    existingDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    const existing = await MuhuratCalendar.findOne({
+      date: { $gte: existingDate, $lte: endDate },
+      "location.city": location?.city || "Delhi",
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "Entry already exists for this date and city",
+      });
+    }
+
+    const entry = new MuhuratCalendar({
+      ...req.body,
+      createdBy: req.user._id,
+    });
+
+    await entry.save();
+    await entry.populate("recommended_poojas.pooja_id", "name thumbnail_url");
+
+    res.status(201).json({ success: true, message: "Entry created", entry });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update muhurat entry
+router.put("/muhurat-calendar/:id", async (req, res) => {
+  try {
+    const entry = await MuhuratCalendar.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body },
+      { new: true, runValidators: true },
+    ).populate("recommended_poojas.pooja_id", "name thumbnail_url");
+
+    if (!entry) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Entry not found" });
+    }
+
+    res.json({ success: true, message: "Entry updated", entry });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete muhurat entry
+router.delete("/muhurat-calendar/:id", async (req, res) => {
+  try {
+    const entry = await MuhuratCalendar.findByIdAndDelete(req.params.id);
+    if (!entry) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Entry not found" });
+    }
+    res.json({ success: true, message: "Entry deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Bulk create muhurat entries (for generating month/year data)
+router.post("/muhurat-calendar/bulk", async (req, res) => {
+  try {
+    const { entries } = req.body;
+
+    if (!entries || !Array.isArray(entries) || entries.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "entries array is required" });
+    }
+
+    const createdEntries = [];
+    const errors = [];
+
+    for (const entryData of entries) {
+      try {
+        const entry = new MuhuratCalendar({
+          ...entryData,
+          createdBy: req.user._id,
+        });
+        await entry.save();
+        createdEntries.push(entry);
+      } catch (err) {
+        errors.push({ date: entryData.date, error: err.message });
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `Created ${createdEntries.length} entries`,
+      created: createdEntries.length,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get upcoming Tarpan days
+router.get("/muhurat-calendar/tarpan/upcoming", async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const entries = await MuhuratCalendar.find({
+      date: { $gte: today },
+      "tarpan_info.is_tarpan_day": true,
+      isActive: true,
+    })
+      .sort({ date: 1 })
+      .limit(parseInt(limit));
+
+    res.json({ success: true, entries });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get upcoming festivals
+router.get("/muhurat-calendar/festivals/upcoming", async (req, res) => {
+  try {
+    const { limit = 10, type } = req.query;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const query = {
+      date: { $gte: today },
+      "festival.is_festival": true,
+      isActive: true,
+    };
+
+    if (type) query["festival.festival_type"] = type;
+
+    const entries = await MuhuratCalendar.find(query)
+      .sort({ date: 1 })
+      .limit(parseInt(limit));
+
+    res.json({ success: true, entries });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
